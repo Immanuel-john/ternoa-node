@@ -10,7 +10,7 @@ pub use ternoa_runtime_common::constants::currency::EXISTENTIAL_DEPOSIT;
 use sc_cli::{ChainSpec, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 use sp_keyring::Sr25519Keyring;
-
+use crate::service::IdentifyVariant;
 #[cfg(feature = "try-runtime")]
 use {
 	alphanet_runtime::constants::time::SLOT_DURATION,
@@ -44,18 +44,27 @@ impl SubstrateCli for Cli {
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 		Ok(match id {
-			// "alphanet" => Box::new(chain_spec::alphanet_config()?),
-			// #[cfg(feature = "alphanet-native")]
-			"alphanet-dev" | "a-dev" | "dev" => Box::new(chain_spec::development_config()),
+			"alphanet" => Box::new(chain_spec::alphanet_config()?),
+			#[cfg(feature = "alphanet-native")]
+			"alphanet-dev" | "a-dev" | "dev" => Box::new(chain_spec::alphanet::development_config()),
 
-			// "mainnet" => Box::new(chain_spec::mainnet_config()?),
-			// #[cfg(feature = "mainnet-native")]
-			// "mainnet-dev" | "m-dev" => Box::new(chain_spec::mainnet::development_config()),
+			"mainnet" => Box::new(chain_spec::mainnet_config()?),
+			#[cfg(feature = "mainnet-native")]
+			"mainnet-dev" | "m-dev" => Box::new(chain_spec::mainnet::development_config()),
 
 			"" => return Err("Please specify which chain you want to run!".into()),
 			path => {
 				let path = std::path::PathBuf::from(path);
-				Box::new(chain_spec::AlphanetChainSpec::from_json_file(path)?)
+
+				let chain_spec =
+					Box::new(chain_spec::MainnetChainSpec::from_json_file(path.clone())?)
+						as Box<dyn sc_service::ChainSpec>;
+
+				if chain_spec.is_alphanet() {
+					Box::new(chain_spec::AlphanetChainSpec::from_json_file(path)?)
+				} else {
+					chain_spec
+				}
 			},
 		})
 	}

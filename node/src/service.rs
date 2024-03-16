@@ -3,7 +3,7 @@
 use std::{sync::Arc};
 
 use sp_runtime::traits::Block as BlockT;
-
+use sc_chain_spec::ChainSpec;
 use sc_client_api::BlockBackend;
 use sc_consensus_babe::SlotProportion;
 use sc_network::NetworkService;
@@ -47,6 +47,31 @@ type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 /// The transaction pool type defintion.
 pub type TransactionPool = sc_transaction_pool::FullPool<Block, FullClient>;
+
+pub trait IdentifyVariant {
+	/// Returns `true` if this is a configuration for the `Alphanet` network.
+	fn is_alphanet(&self) -> bool;
+
+	/// Returns `true` if this is a configuration for the `Mainnet` network.
+	fn is_mainnet(&self) -> bool;
+
+	/// Returns `true` if this is a configuration for a dev network.
+	fn is_dev(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn ChainSpec> {
+	fn is_alphanet(&self) -> bool {
+		self.id().starts_with("alphanet") || self.id().starts_with("alpha")
+	}
+
+	fn is_mainnet(&self) -> bool {
+		self.id().starts_with("mainnet") || self.id().starts_with("main")
+	}
+
+	fn is_dev(&self) -> bool {
+		self.id().ends_with("dev")
+	}
+}
 type FullGrandpaBlockImport =
 	sc_consensus_grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
 
