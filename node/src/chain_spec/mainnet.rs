@@ -26,7 +26,7 @@ use sc_chain_spec::ChainType;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::sr25519;
-use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_consensus_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::{BoundedVec, Perbill};
 use ternoa_core_primitives::AccountId;
 
@@ -152,7 +152,7 @@ pub fn genesis(input: GenesisInput) -> GenesisConfig {
 			stakers: initial_authorities
 				.iter()
 				.map(|x| {
-					(x.0.clone(), x.1.clone(), STASH, alphanet_runtime::StakerStatus::Validator)
+					(x.0.clone(), x.1.clone(), STASH, mainnet_runtime::StakerStatus::Validator)
 				})
 				.collect(),
 			invulnerables,
