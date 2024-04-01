@@ -101,7 +101,7 @@ Podman flag explanation:
 ## Run Locally
 ```bash
   # Make sure that you have built a binary from the "Build Locally" step.
-  ./target/release/ternoa --chain alphanet-dev --alice --tmp --name MyLocalNode --rpc-external --ws-external --rpc-cors all --telemetry-url "wss://telemetry.polkadot.io/submit/ 0"
+  ./target/release/ternoa-node --chain alphanet-dev --alice --tmp --name MyLocalNode --rpc-external --ws-external --rpc-cors all --telemetry-url "wss://telemetry.polkadot.io/submit/ 0"
 ```
 
 ## Run With Podman

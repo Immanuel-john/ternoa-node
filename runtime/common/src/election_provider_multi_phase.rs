@@ -31,7 +31,7 @@ macro_rules! impl_elections_weights {
 			///
 			/// We want to keep it as high as possible, but can't risk having it reject,
 			/// so we always subtract the base block execution weight.
-			pub OffchainSolutionWeightLimit: Weight = BlockWeights::get()
+			pub OffchainSolutionWeightLimit: Weight = RuntimeBlockWeights::get()
 				.get(DispatchClass::Normal)
 				.max_extrinsic
 				.expect("Normal extrinsics have weight limit configured by default; qed")

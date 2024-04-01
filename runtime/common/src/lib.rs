@@ -141,7 +141,7 @@ macro_rules! impl_runtime_weights {
 
 		parameter_types! {
 			/// Block weights base values and limits.
-			pub BlockWeights: limits::BlockWeights = limits::BlockWeights::builder()
+			pub RuntimeBlockWeights: limits::BlockWeights = limits::BlockWeights::builder()
 				.base_block($runtime::weights::BlockExecutionWeight::get())
 				.for_class(DispatchClass::all(), |weights| {
 					weights.base_extrinsic = $runtime::weights::ExtrinsicBaseWeight::get();
@@ -159,6 +159,7 @@ macro_rules! impl_runtime_weights {
 				})
 				.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 				.build_or_panic();
+			pub MaxCollectivesProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 		}
 	};
 }

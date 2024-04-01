@@ -32,11 +32,14 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_balances::WeightInfo for WeightInfo<T> {
 	// Storage: System Account (r:1 w:1)
-	fn transfer() -> Weight {
-		// Minimum execution time: 40_902 nanoseconds.
-		Weight::from_parts(41_638_000 as u64, 0)
-			.saturating_add(T::DbWeight::get().reads(1 as u64))
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	fn transfer_allow_death() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `3593`
+		// Minimum execution time: 59_458_000 picoseconds.
+		Weight::from_parts(60_307_000, 3593)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
 	}
 	// Storage: System Account (r:1 w:1)
 	fn transfer_keep_alive() -> Weight {
@@ -46,14 +49,14 @@ impl<T: frame_system::Config> pallet_balances::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: System Account (r:1 w:1)
-	fn set_balance_creating() -> Weight {
+	fn force_set_balance_creating() -> Weight {
 		// Minimum execution time: 23_901 nanoseconds.
 		Weight::from_parts(24_238_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 	}
 	// Storage: System Account (r:1 w:1)
-	fn set_balance_killing() -> Weight {
+	fn force_set_balance_killing() -> Weight {
 		// Minimum execution time: 26_402 nanoseconds.
 		Weight::from_parts(27_026_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
@@ -79,5 +82,18 @@ impl<T: frame_system::Config> pallet_balances::WeightInfo for WeightInfo<T> {
 		Weight::from_parts(20_435_000 as u64, 0)
 			.saturating_add(T::DbWeight::get().reads(1 as u64))
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
+	}
+
+	fn upgrade_accounts(u: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0 + u * (135 ±0)`
+		//  Estimated: `990 + u * (2603 ±0)`
+		// Minimum execution time: 19_847_000 picoseconds.
+		Weight::from_parts(20_053_000, 990)
+			// Standard Error: 11_643
+			.saturating_add(Weight::from_parts(14_563_782, 0).saturating_mul(u.into()))
+			.saturating_add(T::DbWeight::get().reads((1_u64).saturating_mul(u.into())))
+			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(u.into())))
+			.saturating_add(Weight::from_parts(0, 2603).saturating_mul(u.into()))
 	}
 }

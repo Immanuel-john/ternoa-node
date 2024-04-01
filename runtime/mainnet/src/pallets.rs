@@ -50,7 +50,7 @@ pub use ternoa_runtime_common::constants::currency::{ UNITS, deposit };
 
 use crate::{
 	constants::time::EPOCH_DURATION_IN_SLOTS, AuthorityDiscovery, Babe, BagsList, Balances,
-	BlockWeights, Council, ElectionProviderMultiPhase, Grandpa, Historical, ImOnline, Marketplace,
+	RuntimeBlockWeights, Council, ElectionProviderMultiPhase, Grandpa, Historical, ImOnline, Marketplace,
 	OffchainSolutionLengthLimit, OffchainSolutionWeightLimit, Offences, OriginCaller, PalletInfo,
 	Preimage, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Scheduler, Session, Signature,
 	SignedPayload, Staking, StakingRewards, System, TechnicalCommittee, Timestamp,
@@ -61,6 +61,7 @@ pub use common::babe::BABE_GENESIS_EPOCH_CONFIG;
 
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking::StakerStatus;
+use crate::MaxCollectivesProposalWeight;
 
 type RootOrAtLeastHalfOfCommittee = EitherOfDiverse<
 	EnsureRoot<AccountId>,
@@ -73,7 +74,7 @@ parameter_types! {
 
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = frame_support::traits::Everything;
-	type BlockWeights = BlockWeights;
+	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = BlockLength;
 	type DbWeight = RocksDbWeight;
 	type RuntimeOrigin = RuntimeOrigin;
@@ -125,6 +126,10 @@ impl pallet_balances::Config for Runtime {
 	type ExistentialDeposit = common::balances::ExistentialDeposit;
 	type AccountStore = frame_system::Pallet<Runtime>;
 	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+	type FreezeIdentifier = ();
+	type MaxFreezes = ();
+	type HoldIdentifier = ();
+	type MaxHolds = ConstU32<0>;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -448,6 +453,7 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<Self::AccountId>;
+	type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 
 // Pallet Membership
@@ -475,7 +481,7 @@ impl ternoa_mandate::Config for Runtime {
 // Scheduler
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
-	BlockWeights::get().max_block;
+	RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 512;
 }
 
@@ -532,6 +538,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = weights::pallet_collective::WeightInfo<Runtime>;
 	type SetMembersOrigin = EnsureRoot<Self::AccountId>;
+	type MaxProposalWeight = MaxCollectivesProposalWeight;
 }
 // Make sure that there are no more than MaxMembers members elected via phragmen.
 const_assert!(
@@ -817,13 +824,13 @@ impl pallet_insecure_randomness_collective_flip::Config for Runtime {}
 parameter_types! {
 	pub const DepositPerItem: Balance = deposit(1, 0);
 	pub const DepositPerByte: Balance = deposit(0, 1);
-	pub const DeletionQueueDepth: u32 = 128;
+	pub const DefaultDepositLimit: Balance = deposit(1024, 1024 * 1024);
 	// The lazy deletion runs inside on_initialize.
-	pub DeletionWeightLimit: Weight = BlockWeights::get()
+	pub DeletionWeightLimit: Weight = RuntimeBlockWeights::get()
 		.per_class
 		.get(DispatchClass::Normal)
 		.max_total
-		.unwrap_or(BlockWeights::get().max_block);
+		.unwrap_or(RuntimeBlockWeights::get().max_block);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
@@ -846,8 +853,7 @@ impl pallet_contracts::Config for Runtime {
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
 	type ChainExtension = ();
-	type DeletionQueueDepth = DeletionQueueDepth;
-	type DeletionWeightLimit = DeletionWeightLimit;
+	type DefaultDepositLimit = DefaultDepositLimit;
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
