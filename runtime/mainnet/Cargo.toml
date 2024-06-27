@@ -41,7 +41,7 @@ pallet-multisig = { workspace = true, default-features = false }
 pallet-identity = { workspace = true, default-features = false }
 pallet-assets = { workspace = true, default-features = false }
 pallet-contracts = { workspace = true, default-features = false }
-pallet-contracts-primitives = { workspace = true, default-features = false }
+#pallet-contracts-primitives = { workspace = true, default-features = false }
 pallet-insecure-randomness-collective-flip = { workspace = true, default-features = false }
 
 # Benchmarking
@@ -53,7 +53,7 @@ pallet-offences-benchmarking = { workspace = true, default-features = false, opt
 
 # Try Runtime
 frame-try-runtime = { workspace = true, default-features = false, optional = true }
-try-runtime-cli = { workspace = true, default-features = false, optional = true }
+#try-runtime-cli = { workspace = true, default-features = false, optional = true }
 
 # Substrate Primitives
 sp-api = { workspace = true, default-features = false }
@@ -172,7 +172,7 @@ std = [
 	"pallet-identity/std",
 	"pallet-assets/std",
 	"pallet-contracts/std",
-	"pallet-contracts-primitives/std",
+	#"pallet-contracts-primitives/std",
 	"pallet-insecure-randomness-collective-flip/std",
 	#"substrate-wasm-builder",
 ]

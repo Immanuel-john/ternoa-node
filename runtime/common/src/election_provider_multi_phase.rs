@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{dispatch::TransactionPriority, parameter_types, sp_runtime::Perbill};
+use frame_support::{pallet_prelude::TransactionPriority, parameter_types, sp_runtime::Perbill};
 use sp_std::vec;
 use ternoa_core_primitives::{AccountId, Balance};
 
