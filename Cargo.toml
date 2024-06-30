@@ -50,6 +50,7 @@ pallet-elections-phragmen = { git = "https://github.com/paritytech/polkadot-sdk"
 pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0", default-features = false }
 pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0", default-features = false }
 pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0", default-features = false }
+pallet-asset-rate = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0", default-features = false }
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0" }
 node-inspect = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0" }
 substrate-build-script-utils = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.13.0" }

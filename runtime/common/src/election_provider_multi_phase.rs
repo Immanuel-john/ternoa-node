@@ -17,6 +17,8 @@
 use frame_support::{pallet_prelude::TransactionPriority, parameter_types, sp_runtime::Perbill};
 use sp_std::vec;
 use ternoa_core_primitives::{AccountId, Balance};
+use frame_election_provider_support::bounds::{ElectionBoundsBuilder, ElectionBounds};
+use sp_runtime::Percent;
 
 use crate::constants::currency::{deposit, UNITS};
 
@@ -53,6 +55,8 @@ parameter_types! {
 	pub const SignedMaxSubmissions: u32 = 16;
 	// Each good submission will get 1/10 CAPS as reward
 	pub const SignedRewardBase: Balance = UNITS / 10;
+	pub const SignedFixedDeposit: Balance = 1 * UNITS;
+	pub const SignedDepositIncreaseFactor: Percent = Percent::from_percent(10);
 	pub const SignedDepositBase: Balance = deposit(2, 0);
 	pub const SignedDepositByte: Balance = deposit(0, 10) / 1024;
 	pub const SignedMaxRefunds: u32 = 16 / 4;
@@ -74,6 +78,11 @@ parameter_types! {
 		pub MaxActiveValidators: u32 = 1000;
 
 	pub BetterUnsignedThreshold: Perbill = Perbill::from_rational(5u32, 10_000);
+	pub ElectionBoundsOnChain: ElectionBounds = ElectionBoundsBuilder::default()
+	.voters_count(5_000.into()).targets_count(1_250.into()).build();
+
+	pub ElectionBoundsMultiPhase: ElectionBounds = ElectionBoundsBuilder::default()
+		.voters_count(10_000.into()).targets_count(1_500.into()).build();
 }
 
 frame_election_provider_support::generate_solution_type!(

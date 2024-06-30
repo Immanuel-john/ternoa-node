@@ -17,12 +17,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_election_provider_support::Weight;
+use frame_support::weights::constants::BlockExecutionWeight;
 use frame_support::{parameter_types, weights::constants::WEIGHT_REF_TIME_PER_SECOND};
-use frame_system::limits;
+use frame_system::limits::{BlockLength, BlockWeights};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{FixedPointNumber, Perbill, Perquintill, traits::{Bounded}};
 use static_assertions::const_assert;
 use ternoa_core_primitives::BlockNumber;
+use frame_support::pallet_prelude::DispatchClass;
+use frame_support::weights::constants::ExtrinsicBaseWeight;
 
 pub mod assets;
 pub mod authorship;
@@ -81,10 +84,30 @@ parameter_types! {
 	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128); // TODO!
 	pub MaximumMultiplier: Multiplier = Bounded::max_value();
 
-	pub BlockLength: limits::BlockLength =
-	limits::BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
-
+	// pub BlockLength: limits::BlockLength =
+	// limits::BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+	pub RuntimeBlockLength: BlockLength =
+	BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
+pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
+	.base_block(BlockExecutionWeight::get())
+	.for_class(DispatchClass::all(), |weights| {
+		weights.base_extrinsic = ExtrinsicBaseWeight::get();
+	})
+	.for_class(DispatchClass::Normal, |weights| {
+		weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
+	})
+	.for_class(DispatchClass::Operational, |weights| {
+		weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
+		// Operational transactions have some extra reserved space, so that they
+		// are included even if block reached `MAXIMUM_BLOCK_WEIGHT`.
+		weights.reserved = Some(
+			MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
+		);
+	})
+	.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
+	.build_or_panic();
 	pub const SS58Prefix: u8 = 42;
+	pub MaxCollectivesProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
 }
 
 /// Parameterized slow adjusting fee updated based on
@@ -160,6 +183,8 @@ macro_rules! impl_runtime_weights {
 				.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 				.build_or_panic();
 			pub MaxCollectivesProposalWeight: Weight = Perbill::from_percent(50) * RuntimeBlockWeights::get().max_block;
+			pub RuntimeBlockLength: BlockLength =
+		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
 		}
 	};
 }

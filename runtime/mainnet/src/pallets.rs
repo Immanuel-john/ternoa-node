@@ -44,7 +44,7 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
-use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Hash, Index, Moment};
+use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Hash, Index, Moment, Nonce};
 use ternoa_runtime_common as common;
 pub use ternoa_runtime_common::constants::currency::{ UNITS, deposit };
 

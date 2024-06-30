@@ -18,4 +18,5 @@ use frame_support::parameter_types;
 
 parameter_types! {
 	pub const MaxAuthorities: u32 = 100_000;
+	pub const MaxNominators: u32 = 64;
 }

@@ -132,4 +132,58 @@ impl<T: frame_system::Config> pallet_treasury::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes((3_u64).saturating_mul(p.into())))
 			.saturating_add(Weight::from_parts(0, 7789).saturating_mul(p.into()))
 	}
+	/// Storage: `Treasury::ProposalCount` (r:1 w:1)
+	/// Proof: `Treasury::ProposalCount` (`max_values`: Some(1), `max_size`: Some(4), added: 499, mode: `MaxEncodedLen`)
+	/// Storage: `Treasury::Approvals` (r:1 w:1)
+	/// Proof: `Treasury::Approvals` (`max_values`: Some(1), `max_size`: Some(402), added: 897, mode: `MaxEncodedLen`)
+	/// Storage: `Treasury::Proposals` (r:0 w:1)
+	/// Proof: `Treasury::Proposals` (`max_values`: None, `max_size`: Some(108), added: 2583, mode: `MaxEncodedLen`)
+	fn spend_local() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `76`
+		//  Estimated: `1887`
+		// Minimum execution time: 11_910_000 picoseconds.
+		Weight::from_parts(12_681_000, 1887)
+			.saturating_add(T::DbWeight::get().reads(2_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+	}
+	/// Storage: `Treasury::Spends` (r:1 w:1)
+	/// Proof: `Treasury::Spends` (`max_values`: None, `max_size`: Some(73), added: 2548, mode: `MaxEncodedLen`)
+	/// Storage: `Assets::Asset` (r:1 w:1)
+	/// Proof: `Assets::Asset` (`max_values`: None, `max_size`: Some(210), added: 2685, mode: `MaxEncodedLen`)
+	/// Storage: `Assets::Account` (r:2 w:2)
+	/// Proof: `Assets::Account` (`max_values`: None, `max_size`: Some(134), added: 2609, mode: `MaxEncodedLen`)
+	/// Storage: `System::Account` (r:1 w:1)
+	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
+	fn payout() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `709`
+		//  Estimated: `6208`
+		// Minimum execution time: 58_857_000 picoseconds.
+		Weight::from_parts(61_291_000, 6208)
+			.saturating_add(T::DbWeight::get().reads(5_u64))
+			.saturating_add(T::DbWeight::get().writes(5_u64))
+	}
+	/// Storage: `Treasury::Spends` (r:1 w:1)
+	/// Proof: `Treasury::Spends` (`max_values`: None, `max_size`: Some(73), added: 2548, mode: `MaxEncodedLen`)
+	fn check_status() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `198`
+		//  Estimated: `3538`
+		// Minimum execution time: 12_116_000 picoseconds.
+		Weight::from_parts(12_480_000, 3538)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
+	/// Storage: `Treasury::Spends` (r:1 w:1)
+	/// Proof: `Treasury::Spends` (`max_values`: None, `max_size`: Some(73), added: 2548, mode: `MaxEncodedLen`)
+	fn void_spend() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `198`
+		//  Estimated: `3538`
+		// Minimum execution time: 10_834_000 picoseconds.
+		Weight::from_parts(11_427_000, 3538)
+			.saturating_add(T::DbWeight::get().reads(1_u64))
+			.saturating_add(T::DbWeight::get().writes(1_u64))
+	}
 }

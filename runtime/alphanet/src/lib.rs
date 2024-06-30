@@ -29,7 +29,7 @@ mod pallets;
 mod version;
 mod weights;
 
-use frame_support::{construct_runtime, parameter_types, traits::KeyOwnerProofSystem};
+use frame_support::{construct_runtime, parameter_types, traits::KeyOwnerProofSystem, weights::Weight};
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_grandpa::{
@@ -52,8 +52,9 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
 use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Index, Signature, Hash};
-use ternoa_runtime_common::{impl_runtime_weights, BlockLength};
+use ternoa_runtime_common::{impl_runtime_weights, RuntimeBlockWeights};
 pub use version::VERSION;
+use sp_runtime::Permill;
 
 #[cfg(feature = "std")]
 pub use version::native_version;
@@ -80,7 +81,7 @@ pub fn wasm_binary_unwrap() -> &'static [u8] {
 	)
 }
 
-impl_runtime_weights!(alphanet_runtime_constants);
+//impl_runtime_weights!(alphanet_runtime_constants);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -156,7 +157,10 @@ construct_runtime!(
 		TransmissionProtocols: ternoa_transmission_protocols = 35,
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip = 36,
 		Contracts: pallet_contracts = 37,
+		AssetRate: pallet_asset_rate = 38,
+	
 	}
+
 );
 
 /// The address format for describing accounts.
@@ -216,10 +220,10 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(block: Block) {
-			Executive::execute_block(block)
+			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -380,7 +384,7 @@ impl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
 			input_data: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
+		) -> pallet_contracts::ContractExecResult<Balance, EventRecord> {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
 				origin,
@@ -400,10 +404,10 @@ impl_runtime_apis! {
 			value: Balance,
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
-			code: pallet_contracts_primitives::Code<Hash>,
+			code: pallet_contracts::Code<Hash>,
 			data: Vec<u8>,
 			salt: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance, EventRecord>
+		) -> pallet_contracts::ContractInstantiateResult<AccountId, Balance, EventRecord>
 		{
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
@@ -424,7 +428,7 @@ impl_runtime_apis! {
 			code: Vec<u8>,
 			storage_deposit_limit: Option<Balance>,
 			determinism: pallet_contracts::Determinism,
-		) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+		) -> pallet_contracts::CodeUploadResult<Hash, Balance>
 		{
 			Contracts::bare_upload_code(
 				origin,
@@ -437,7 +441,7 @@ impl_runtime_apis! {
 		fn get_storage(
 			address: AccountId,
 			key: Vec<u8>,
-		) -> pallet_contracts_primitives::GetStorageResult {
+		) -> pallet_contracts::GetStorageResult {
 			Contracts::get_storage(
 				address,
 				key

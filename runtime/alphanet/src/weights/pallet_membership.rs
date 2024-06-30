@@ -77,6 +77,29 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(3))
 			.saturating_add(Weight::from_parts(0, 192).saturating_mul(m.into()))
 	}
+		/// Storage: `TechnicalMembership::Members` (r:1 w:1)
+	/// Proof: `TechnicalMembership::Members` (`max_values`: Some(1), `max_size`: Some(3202), added: 3697, mode: `MaxEncodedLen`)
+	/// Storage: `TechnicalCommittee::Proposals` (r:1 w:0)
+	/// Proof: `TechnicalCommittee::Proposals` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `TechnicalMembership::Prime` (r:1 w:0)
+	/// Proof: `TechnicalMembership::Prime` (`max_values`: Some(1), `max_size`: Some(32), added: 527, mode: `MaxEncodedLen`)
+	/// Storage: `TechnicalCommittee::Members` (r:0 w:1)
+	/// Proof: `TechnicalCommittee::Members` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// Storage: `TechnicalCommittee::Prime` (r:0 w:1)
+	/// Proof: `TechnicalCommittee::Prime` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)
+	/// The range of component `m` is `[1, 100]`.
+	fn reset_members(m: u32, ) -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `311 + m * (64 ±0)`
+		//  Estimated: `4687 + m * (64 ±0)`
+		// Minimum execution time: 15_086_000 picoseconds.
+		Weight::from_parts(16_444_101, 4687)
+			// Standard Error: 967
+			.saturating_add(Weight::from_parts(143_947, 0).saturating_mul(m.into()))
+			.saturating_add(T::DbWeight::get().reads(3_u64))
+			.saturating_add(T::DbWeight::get().writes(3_u64))
+			.saturating_add(Weight::from_parts(0, 64).saturating_mul(m.into()))
+	}
 	/// Storage: TechnicalMembership Members (r:1 w:1)
 	/// Proof: TechnicalMembership Members (max_values: Some(1), max_size: Some(3202), added: 3697, mode: MaxEncodedLen)
 	/// Storage: TechnicalCommittee Proposals (r:1 w:0)
@@ -97,30 +120,6 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 8622))
 			// Standard Error: 619
 			.saturating_add(Weight::from_parts(44_408, 0).saturating_mul(m.into()))
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(3))
-			.saturating_add(Weight::from_parts(0, 192).saturating_mul(m.into()))
-	}
-	/// Storage: TechnicalMembership Members (r:1 w:1)
-	/// Proof: TechnicalMembership Members (max_values: Some(1), max_size: Some(3202), added: 3697, mode: MaxEncodedLen)
-	/// Storage: TechnicalCommittee Proposals (r:1 w:0)
-	/// Proof Skipped: TechnicalCommittee Proposals (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: TechnicalMembership Prime (r:1 w:0)
-	/// Proof: TechnicalMembership Prime (max_values: Some(1), max_size: Some(32), added: 527, mode: MaxEncodedLen)
-	/// Storage: TechnicalCommittee Members (r:0 w:1)
-	/// Proof Skipped: TechnicalCommittee Members (max_values: Some(1), max_size: None, mode: Measured)
-	/// Storage: TechnicalCommittee Prime (r:0 w:1)
-	/// Proof Skipped: TechnicalCommittee Prime (max_values: Some(1), max_size: None, mode: Measured)
-	/// The range of component `m` is `[1, 100]`.
-	fn reset_member(m: u32, ) -> Weight {
-		// Proof Size summary in bytes:
-		//  Measured:  `312 + m * (64 ±0)`
-		//  Estimated: `8622 + m * (192 ±0)`
-		// Minimum execution time: 18_088_000 picoseconds.
-		Weight::from_parts(19_292_324, 0)
-			.saturating_add(Weight::from_parts(0, 8622))
-			// Standard Error: 759
-			.saturating_add(Weight::from_parts(162_348, 0).saturating_mul(m.into()))
 			.saturating_add(T::DbWeight::get().reads(3))
 			.saturating_add(T::DbWeight::get().writes(3))
 			.saturating_add(Weight::from_parts(0, 192).saturating_mul(m.into()))
@@ -174,15 +173,12 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 	/// Storage: TechnicalCommittee Prime (r:0 w:1)
 	/// Proof Skipped: TechnicalCommittee Prime (max_values: Some(1), max_size: None, mode: Measured)
 	/// The range of component `m` is `[1, 100]`.
-	fn clear_prime(m: u32, ) -> Weight {
+	fn clear_prime() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `0`
 		//  Estimated: `0`
 		// Minimum execution time: 3_010_000 picoseconds.
 		Weight::from_parts(3_196_429, 0)
-			.saturating_add(Weight::from_parts(0, 0))
-			// Standard Error: 78
-			.saturating_add(Weight::from_parts(471, 0).saturating_mul(m.into()))
 			.saturating_add(T::DbWeight::get().writes(2))
 	}
 }

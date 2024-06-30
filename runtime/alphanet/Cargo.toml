@@ -40,6 +40,7 @@ pallet-elections-phragmen = { workspace = true, default-features = false }
 pallet-multisig = { workspace = true, default-features = false }
 pallet-identity = { workspace = true, default-features = false }
 pallet-assets = { workspace = true, default-features = false }
+pallet-asset-rate = { workspace = true, default-features = false }
 pallet-contracts = { workspace = true, default-features = false }
 #pallet-contracts-primitives = { workspace = true, default-features = false }
 pallet-insecure-randomness-collective-flip = { workspace = true, default-features = false }
@@ -172,6 +173,7 @@ std = [
 	"pallet-multisig/std",
 	"pallet-identity/std",
 	"pallet-assets/std",
+	"pallet-asset-rate/std",
 	#"substrate-wasm-builder",
 ]
 

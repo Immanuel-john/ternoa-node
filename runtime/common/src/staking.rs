@@ -34,7 +34,7 @@ parameter_types! {
 	// 1 hour session, 15 minutes unsigned phase, 8 offchain executions.
 	pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(17);
 	pub const MaxNominations: u32 = <NposCompactSolution24 as frame_election_provider_support::NposSolution>::LIMIT as u32;
-
+	pub const MaxControllersInDeprecationBatch: u32 = 5900;
 	pub const MaxUnlockingChunks: u32 = 32;
 	pub HistoryDepth: u32 = 84;
 }

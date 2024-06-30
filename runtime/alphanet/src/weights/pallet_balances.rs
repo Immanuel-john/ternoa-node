@@ -93,4 +93,25 @@ impl<T: frame_system::Config> pallet_balances::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes((1_u64).saturating_mul(u.into())))
 			.saturating_add(Weight::from_parts(0, 2603).saturating_mul(u.into()))
 	}
+	fn force_adjust_total_issuance() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 6_265_000 picoseconds.
+		Weight::from_parts(6_594_000, 0)
+	}
+	fn burn_allow_death() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 30_151_000 picoseconds.
+		Weight::from_parts(30_968_000, 0)
+	}
+	fn burn_keep_alive() -> Weight {
+		// Proof Size summary in bytes:
+		//  Measured:  `0`
+		//  Estimated: `0`
+		// Minimum execution time: 20_055_000 picoseconds.
+		Weight::from_parts(20_711_000, 0)
+	}
 }
