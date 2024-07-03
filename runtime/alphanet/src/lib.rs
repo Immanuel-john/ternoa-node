@@ -198,8 +198,7 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 const IDENTITY_MIGRATION_KEY_LIMIT: u64 = u64::MAX;
 
 pub type Migrations = (
-	pallet_alliance::migration::Migration<Runtime>,
-	pallet_contracts::Migration<Runtime>,
+	//pallet_contracts::Migration<Runtime>,
 	pallet_identity::migration::versioned::V0ToV1<Runtime, IDENTITY_MIGRATION_KEY_LIMIT>,
 );
 
