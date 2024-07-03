@@ -141,22 +141,6 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
 }
 
-// parameter_types! {
-// 	pub const ProposalBond: Permill = Permill::from_percent(5);
-// 	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
-// 	pub const SpendPeriod: BlockNumber = 1 * DAYS;
-// 	pub const Burn: Permill = Permill::from_percent(50);
-// 	pub const TipCountdown: BlockNumber = 1 * DAYS;
-// 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-// 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-// 	pub const DataDepositPerByte: Balance = 1 * CENTS;
-// 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-// 	pub const MaximumReasonLength: u32 = 300;
-// 	pub const MaxApprovals: u32 = 100;
-// 	pub const MaxBalance: Balance = Balance::max_value();
-// 	pub const SpendPayoutPeriod: BlockNumber = 30 * DAYS;
-// }
-
 parameter_types! {
 	pub TreasuryAccount: AccountId = Treasury::account_id();
 }
@@ -931,28 +915,17 @@ impl pallet_contracts::Config for Runtime {
 	type UnsafeUnstableInterface = ConstBool<false>;
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 	type RuntimeHoldReason = RuntimeHoldReason;
-
 	#[cfg(not(feature = "runtime-benchmarks"))]
-
 	type Migrations = ();
-
 	#[cfg(feature = "runtime-benchmarks")]
-
 	type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
-
 	type MaxDelegateDependencies = ConstU32<32>;
-
 	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
-
 	type Debug = ();
-
 	type Environment = ();
-
 	type ApiVersion = ();
-
 	type Xcm = ();
 	type UploadOrigin = EnsureSigned<Self::AccountId>;
-
 	type InstantiateOrigin = EnsureSigned<Self::AccountId>;
 }
 

@@ -4597,6 +4597,7 @@ dependencies = [
  "hex-literal",
  "log",
  "mainnet-runtime-constants",
+ "pallet-asset-rate",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",

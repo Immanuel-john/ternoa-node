@@ -77,7 +77,7 @@ impl<T: frame_system::Config> pallet_membership::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(3))
 			.saturating_add(Weight::from_parts(0, 192).saturating_mul(m.into()))
 	}
-		/// Storage: `TechnicalMembership::Members` (r:1 w:1)
+	/// Storage: `TechnicalMembership::Members` (r:1 w:1)
 	/// Proof: `TechnicalMembership::Members` (`max_values`: Some(1), `max_size`: Some(3202), added: 3697, mode: `MaxEncodedLen`)
 	/// Storage: `TechnicalCommittee::Proposals` (r:1 w:0)
 	/// Proof: `TechnicalCommittee::Proposals` (`max_values`: Some(1), `max_size`: None, mode: `Measured`)

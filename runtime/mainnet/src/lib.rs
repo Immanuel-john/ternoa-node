@@ -29,7 +29,7 @@ mod pallets;
 mod version;
 mod weights;
 
-use frame_support::{construct_runtime, parameter_types, traits::KeyOwnerProofSystem};
+use frame_support::{construct_runtime, parameter_types, traits::KeyOwnerProofSystem, weights::Weight};
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_grandpa::{
@@ -52,8 +52,9 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use sp_version::RuntimeVersion;
 use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Index, Signature, Hash};
-use ternoa_runtime_common::{impl_runtime_weights, BlockLength};
+use ternoa_runtime_common::{impl_runtime_weights, RuntimeBlockWeights};
 pub use version::VERSION;
+use sp_runtime::Permill;
 
 #[cfg(feature = "std")]
 pub use version::native_version;
@@ -80,7 +81,7 @@ pub fn wasm_binary_unwrap() -> &'static [u8] {
 	)
 }
 
-impl_runtime_weights!(mainnet_runtime_constants);
+//impl_runtime_weights!(alphanet_runtime_constants);
 
 construct_runtime!(
 	pub enum Runtime where
@@ -112,6 +113,9 @@ construct_runtime!(
 		Grandpa: pallet_grandpa = 10,
 		ImOnline: pallet_im_online = 11,
 		AuthorityDiscovery: pallet_authority_discovery = 12,
+		Council: pallet_collective::<Instance2> = 24,
+		PhragmenElection: pallet_elections_phragmen = 25,
+		Democracy: pallet_democracy = 26,
 
 		// Elections pallets
 		//
@@ -126,9 +130,6 @@ construct_runtime!(
 		StakingRewards: ternoa_staking_rewards = 14,
 		ElectionProviderMultiPhase: pallet_election_provider_multi_phase = 15,
 		BagsList: pallet_bags_list = 16,
-		Council: pallet_collective::<Instance2> = 24,
-		PhragmenElection: pallet_elections_phragmen = 25,
-		Democracy: pallet_democracy = 26,
 
 		// Government pallets
 		//
@@ -156,7 +157,10 @@ construct_runtime!(
 		TransmissionProtocols: ternoa_transmission_protocols = 35,
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip = 36,
 		Contracts: pallet_contracts = 37,
+		AssetRate: pallet_asset_rate = 38,
+	
 	}
+
 );
 
 /// The address format for describing accounts.
@@ -190,7 +194,6 @@ pub type UncheckedExtrinsic =
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
-
 pub type Migrations = (
 	pallet_contracts::Migration<Runtime>,
 );
@@ -217,10 +220,10 @@ impl_runtime_apis! {
 		}
 
 		fn execute_block(block: Block) {
-			Executive::execute_block(block)
+			Executive::execute_block(block);
 		}
 
-		fn initialize_block(header: &<Block as BlockT>::Header) {
+		fn initialize_block(header: &<Block as BlockT>::Header) -> sp_runtime::ExtrinsicInclusionMode {
 			Executive::initialize_block(header)
 		}
 	}
@@ -237,6 +240,7 @@ impl_runtime_apis! {
 		fn metadata_versions() -> sp_std::vec::Vec<u32> {
 			Runtime::metadata_versions()
 		}
+
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -380,7 +384,7 @@ impl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
 			input_data: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
+		) -> pallet_contracts::ContractExecResult<Balance, EventRecord> {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
 				origin,
@@ -400,10 +404,10 @@ impl_runtime_apis! {
 			value: Balance,
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
-			code: pallet_contracts_primitives::Code<Hash>,
+			code: pallet_contracts::Code<Hash>,
 			data: Vec<u8>,
 			salt: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance, EventRecord>
+		) -> pallet_contracts::ContractInstantiateResult<AccountId, Balance, EventRecord>
 		{
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
@@ -424,7 +428,7 @@ impl_runtime_apis! {
 			code: Vec<u8>,
 			storage_deposit_limit: Option<Balance>,
 			determinism: pallet_contracts::Determinism,
-		) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+		) -> pallet_contracts::CodeUploadResult<Hash, Balance>
 		{
 			Contracts::bare_upload_code(
 				origin,
@@ -437,13 +441,14 @@ impl_runtime_apis! {
 		fn get_storage(
 			address: AccountId,
 			key: Vec<u8>,
-		) -> pallet_contracts_primitives::GetStorageResult {
+		) -> pallet_contracts::GetStorageResult {
 			Contracts::get_storage(
 				address,
 				key
 			)
 		}
 	}
+
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
 		Block,
@@ -475,14 +480,15 @@ impl_runtime_apis! {
 			SessionKeys::decode_into_raw_public_keys(&encoded)
 		}
 	}
-	#[cfg(feature = "try-runtime")]	
+
+	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
 			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
 			// have a backtrace here. If any of the pre/post migration checks fail, we shall stop
 			// right here and right now.
 			let weight = Executive::try_runtime_upgrade(checks).unwrap();
-			(weight, RuntimeBlockWeights::get().max_block)
+			(weight, BlockWeights::get().max_block)
 		}
 
 		fn execute_block(
@@ -589,6 +595,8 @@ mod benches {
 		[pallet_utility, Utility]
 		[pallet_democracy, Democracy]
 		[pallet_elections_phragmen, PhragmenElection]
+		[pallet_identity, Identity]
+		[pallet_multisig, Multisig]
 		[pallet_assets, Assets]
 	);
 }
