@@ -25,10 +25,11 @@ use frame_election_provider_support::{SequentialPhragmen, Weight};
 use frame_support::{
 	parameter_types,
 	dispatch::DispatchClass,
-	traits::{ConstU32, EitherOfDiverse, KeyOwnerProofSystem, U128CurrencyToVote, AsEnsureOriginWithArg, Nothing, ConstBool},
+	traits::{ConstU32, fungible::HoldConsideration, LinearStoragePrice, EitherOfDiverse, KeyOwnerProofSystem, AsEnsureOriginWithArg, Nothing, ConstBool},
 	weights::{constants::RocksDbWeight, ConstantMultiplier, IdentityFee},
 	PalletId,
 };
+use sp_staking::currency_to_vote::U128CurrencyToVote;
 use frame_system::{EnsureRoot, EnsureWithSuccess, EnsureSigned};
 use pallet_grandpa::AuthorityId as GrandpaId;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -44,9 +45,11 @@ use sp_runtime::{
 use sp_std::vec::Vec;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
-use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Hash, Index, Moment};
+use ternoa_core_primitives::{AccountId, Balance, BlockNumber, Hash, Index, Moment, Nonce};
 use ternoa_runtime_common as common;
 pub use ternoa_runtime_common::constants::currency::{ UNITS, deposit };
+use frame_election_provider_support::onchain;
+use pallet_election_provider_multi_phase::SolutionAccuracyOf;
 
 use crate::{
 	constants::time::EPOCH_DURATION_IN_SLOTS, AuthorityDiscovery, Babe, BagsList, Balances,
@@ -54,7 +57,8 @@ use crate::{
 	OffchainSolutionLengthLimit, OffchainSolutionWeightLimit, Offences, OriginCaller, PalletInfo,
 	Preimage, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin, Scheduler, Session, Signature,
 	SignedPayload, Staking, StakingRewards, System, TechnicalCommittee, Timestamp,
-	TransactionPayment, Treasury, UncheckedExtrinsic, NFT, TEE, VERSION, RandomnessCollectiveFlip,
+	TransactionPayment, Treasury, UncheckedExtrinsic, NFT, TEE, VERSION, RandomnessCollectiveFlip, Block,
+	RuntimeHoldReason, 
 };
 
 pub use common::babe::BABE_GENESIS_EPOCH_CONFIG;
@@ -79,13 +83,12 @@ impl frame_system::Config for Runtime {
 	type DbWeight = RocksDbWeight;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = Index;
-	type BlockNumber = BlockNumber;
+	type Block = Block;
+	type Nonce = Nonce;
 	type Hash = Hash;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = AccountIdLookup<AccountId, ()>;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	type RuntimeEvent = RuntimeEvent;
 	type BlockHashCount = BlockHashCount;
 	type Version = Version;
@@ -128,8 +131,8 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 	type FreezeIdentifier = ();
 	type MaxFreezes = ();
-	type HoldIdentifier = ();
 	type MaxHolds = ConstU32<0>;
+	type RuntimeHoldReason = RuntimeHoldReason;
 }
 
 impl pallet_timestamp::Config for Runtime {
@@ -177,6 +180,7 @@ impl pallet_babe::Config for Runtime {
 		pallet_babe::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
 	type WeightInfo = ();
 	type MaxAuthorities = common::shared::MaxAuthorities;
+	type MaxNominators = common::staking::MaxNominatorRewardedPerValidator;
 }
 
 parameter_types! {
@@ -192,6 +196,7 @@ impl pallet_grandpa::Config for Runtime {
 		pallet_grandpa::EquivocationReportSystem<Self, Offences, Historical, ReportLongevity>;
 	type WeightInfo = ();
 	type MaxAuthorities = common::shared::MaxAuthorities;
+	type MaxNominators = common::staking::MaxNominatorRewardedPerValidator;
 }
 
 impl_opaque_keys! {
@@ -296,7 +301,6 @@ impl pallet_im_online::Config for Runtime {
 	type WeightInfo = weights::pallet_im_online::WeightInfo<Runtime>;
 	type MaxKeys = common::imonline::MaxKeys;
 	type MaxPeerInHeartbeats = common::imonline::MaxPeerInHeartbeats;
-	type MaxPeerDataEncodingSize = common::imonline::MaxPeerDataEncodingSize;
 }
 
 impl pallet_offences::Config for Runtime {
@@ -312,12 +316,13 @@ impl frame_election_provider_support::onchain::Config for OnChainSeqPhragmen {
 	type DataProvider = Staking;
 	type WeightInfo = frame_election_provider_support::weights::SubstrateWeight<Runtime>;
 	type MaxWinners = <Runtime as pallet_election_provider_multi_phase::Config>::MaxWinners;
-	type VotersBound = common::election_provider_multi_phase::MaxOnChainElectingVoters;
-	type TargetsBound = common::election_provider_multi_phase::MaxOnChainElectableTargets;
+	type Bounds = common::election_provider_multi_phase::ElectionBoundsOnChain;
 }
 
+/// Upper limit on the number of NPOS nominations.
+const MAX_QUOTA_NOMINATIONS: u32 = 16;
+
 impl pallet_staking::Config for Runtime {
-	type MaxNominations = common::staking::MaxNominations;
 	type Currency = Balances;
 	type CurrencyBalance = Balance;
 	type UnixTime = Timestamp;
@@ -346,8 +351,9 @@ impl pallet_staking::Config for Runtime {
 	type MaxUnlockingChunks = common::staking::MaxUnlockingChunks;
 	type HistoryDepth = common::staking::HistoryDepth;
 	type BenchmarkingConfig = common::staking::StakingBenchmarkingConfig;
-	type OnStakerSlash = (); // TODO To see NominationPools
 	type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
+	type EventListeners = (); //NominationPools;
+	type NominationsQuota = pallet_staking::FixedNominationsQuota<MAX_QUOTA_NOMINATIONS>;
 }
 
 impl pallet_election_provider_multi_phase::MinerConfig for Runtime {
@@ -379,48 +385,69 @@ parameter_types! {
 	pub OffchainRepeat: BlockNumber = UnsignedPhase::get() / 8;
 }
 
+use sp_core::Get;
+use frame_election_provider_support::BalancingConfig;
+use frame_election_provider_support::Decode;
+
+
+/// Maximum number of iterations for balancing that will be executed in the embedded OCW
+/// miner of election provider multi phase.
+pub const MINER_MAX_ITERATIONS: u32 = 10;
+
+/// A source of random balance for NposSolver, which is meant to be run by the OCW election miner.
+pub struct OffchainRandomBalancing;
+impl Get<Option<BalancingConfig>> for OffchainRandomBalancing {
+	fn get() -> Option<BalancingConfig> {
+		use sp_runtime::traits::TrailingZeroInput;
+		let iterations = match MINER_MAX_ITERATIONS {
+			0 => 0,
+			max => {
+				let seed = sp_io::offchain::random_seed();
+				let random = <u32>::decode(&mut TrailingZeroInput::new(&seed))
+					.expect("input is padded with zeroes; qed") %
+					max.saturating_add(1);
+				random as usize
+			},
+		};
+
+		let config = BalancingConfig { iterations, tolerance: 0 };
+		Some(config)
+	}
+}
+
+use pallet_election_provider_multi_phase::GeometricDepositBase;
+
 impl pallet_election_provider_multi_phase::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	/// What Currency to use to reward or slash miners.
 	type Currency = Balances;
-	/// Something that can predict the fee of a call. Used to sensibly distribute rewards.
 	type EstimateCallFee = TransactionPayment;
-	/// Duration of the unsigned phase. After the signed phase the unsigned phase comes where the
-	/// OCWs from validators compute the election result (solution). The best score from the
-	/// unsigned and signed phase is used.
-	type UnsignedPhase = UnsignedPhase;
-	type SignedMaxSubmissions = common::election_provider_multi_phase::SignedMaxSubmissions;
-	type SignedMaxRefunds = common::election_provider_multi_phase::SignedMaxRefunds;
-	type SignedRewardBase = common::election_provider_multi_phase::SignedRewardBase;
-	type SignedDepositBase = common::election_provider_multi_phase::SignedDepositBase;
-	type SignedDepositByte = common::election_provider_multi_phase::SignedDepositByte;
-	type SignedDepositWeight = ();
-	type SignedMaxWeight =
-		<Self::MinerConfig as pallet_election_provider_multi_phase::MinerConfig>::MaxWeight;
-	type MinerConfig = Self;
-	type SlashHandler = Treasury; // burn slashes
-	type RewardHandler = (); // nothing to do upon rewards
-	/// Duration of the signed phase. In the Signed phase miners (or any account) can compute the
-	/// (solution) result of the election. If they did it correctly they will be rewarded. If they
-	/// wanted to cheat the system they will be slashed. This Signed phase happens before then
-	/// Unsigned one.
 	type SignedPhase = SignedPhase;
+	type UnsignedPhase = UnsignedPhase;
 	type BetterUnsignedThreshold = BetterUnsignedThreshold;
 	type BetterSignedThreshold = ();
 	type OffchainRepeat = OffchainRepeat;
 	type MinerTxPriority = common::election_provider_multi_phase::NposSolutionPriority;
+	type MinerConfig = Self;
+	type SignedMaxSubmissions = common::election_provider_multi_phase::SignedMaxSubmissions;
+	type SignedRewardBase = common::election_provider_multi_phase::SignedRewardBase;
+	type SignedDepositBase = 
+		GeometricDepositBase<Balance, common::election_provider_multi_phase::SignedFixedDeposit, common::election_provider_multi_phase::SignedDepositIncreaseFactor>;
+	type SignedDepositByte = common::election_provider_multi_phase::SignedDepositByte;
+	type SignedMaxRefunds = ConstU32<3>;
+	type SignedDepositWeight = (); 
+	type SignedMaxWeight =
+		<Self::MinerConfig as pallet_election_provider_multi_phase::MinerConfig>::MaxWeight;
+	type SlashHandler = (); // burn slashes
+	type RewardHandler = (); // nothing to do upon rewards
 	type DataProvider = Staking;
-	type Fallback =
-		frame_election_provider_support::onchain::OnChainExecution<OnChainSeqPhragmen>;
-	type GovernanceFallback =
-		frame_election_provider_support::onchain::OnChainExecution<OnChainSeqPhragmen>;
-	type Solver = common::election_provider_multi_phase::Solver<Self>;
-	type BenchmarkingConfig = common::election_provider_multi_phase::BenchmarkConfig;
+	type Fallback = onchain::OnChainExecution<OnChainSeqPhragmen>;
+	type GovernanceFallback = onchain::OnChainExecution<OnChainSeqPhragmen>;
+	type Solver = SequentialPhragmen<AccountId, SolutionAccuracyOf<Self>, OffchainRandomBalancing>;
 	type ForceOrigin = RootOrAtLeastHalfOfCommittee;
-	type WeightInfo = weights::pallet_election_provider_multi_phase::WeightInfo<Runtime>;
-	type MaxElectingVoters = common::election_provider_multi_phase::MaxElectingVoters;
-	type MaxElectableTargets = common::election_provider_multi_phase::MaxElectableTargets;
 	type MaxWinners = common::election_provider_multi_phase::MaxActiveValidators;
+	type ElectionBounds = common::election_provider_multi_phase::ElectionBoundsMultiPhase;
+	type BenchmarkingConfig = common::election_provider_multi_phase::BenchmarkConfig;
+	type WeightInfo = pallet_election_provider_multi_phase::weights::SubstrateWeight<Self>;
 }
 
 // BagsList
@@ -432,13 +459,21 @@ impl pallet_bags_list::Config for Runtime {
 	type Score = sp_npos_elections::VoteWeight;
 }
 
+parameter_types! {
+	pub const PreimageHoldReason: RuntimeHoldReason = RuntimeHoldReason::Preimage(pallet_preimage::HoldReason::Preimage);
+}
+
 impl pallet_preimage::Config for Runtime {
 	type WeightInfo = weights::pallet_preimage::WeightInfo<Runtime>;
 	type RuntimeEvent = RuntimeEvent;
 	type Currency = Balances;
 	type ManagerOrigin = RootOrAtLeastHalfOfCommittee;
-	type BaseDeposit = common::preimage::PreimageBaseDeposit;
-	type ByteDeposit = common::preimage::PreimageByteDeposit;
+	type Consideration = HoldConsideration<
+		AccountId,
+		Balances,
+		PreimageHoldReason,
+		LinearStoragePrice<common::preimage::PreimageBaseDeposit, common::preimage::PreimageByteDeposit, Balance>,
+	>;
 }
 
 // Technical collective
@@ -553,7 +588,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type Currency = Balances;
 	type ChangeMembers = Council;
 	type InitializeMembers = Council;
-	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+	type CurrencyToVote = sp_staking::currency_to_vote::U128CurrencyToVote;
 	type CandidacyBond = common::phragmen_election::PhragmenCandidacyBond;
 	type VotingBondBase = common::phragmen_election::PhragmenVotingBondBase;
 	type VotingBondFactor = common::phragmen_election::PhragmenVotingBondFactor;
@@ -833,6 +868,7 @@ parameter_types! {
 		.max_total
 		.unwrap_or(RuntimeBlockWeights::get().max_block);
 	pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
+	pub CodeHashLockupDepositPercent: Perbill = Perbill::from_percent(30);
 }
 
 impl pallet_contracts::Config for Runtime {
@@ -850,15 +886,24 @@ impl pallet_contracts::Config for Runtime {
 	type CallFilter = Nothing;
 	type DepositPerItem = DepositPerItem;
 	type DepositPerByte = DepositPerByte;
+	type DefaultDepositLimit = DefaultDepositLimit;
 	type CallStack = [pallet_contracts::Frame<Self>; 5];
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	type WeightInfo = pallet_contracts::weights::SubstrateWeight<Self>;
 	type ChainExtension = ();
-	type DefaultDepositLimit = DefaultDepositLimit;
 	type Schedule = Schedule;
 	type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 	type MaxCodeLen = ConstU32<{ 123 * 1024 }>;
 	type MaxStorageKeyLen = ConstU32<128>;
 	type UnsafeUnstableInterface = ConstBool<false>;
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
+	type RuntimeHoldReason = RuntimeHoldReason;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type Migrations = ();
+	#[cfg(feature = "runtime-benchmarks")]
+	type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
+	type MaxDelegateDependencies = ConstU32<32>;
+	type CodeHashLockupDepositPercent = CodeHashLockupDepositPercent;
+	type Debug = ();
+	type Environment = ();
 }

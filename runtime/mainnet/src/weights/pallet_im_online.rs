@@ -43,7 +43,7 @@ impl<T: frame_system::Config> pallet_im_online::WeightInfo for WeightInfo<T> {
 	/// Proof: ImOnline AuthoredBlocks (max_values: None, max_size: Some(56), added: 2531, mode: MaxEncodedLen)
 	/// The range of component `k` is `[1, 1000]`.
 	/// The range of component `e` is `[1, 100]`.
-	fn validate_unsigned_and_then_heartbeat(k: u32, e: u32, ) -> Weight {
+	fn validate_unsigned_and_then_heartbeat(k: u32, ) -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `361 + k * (32 ±0)`
 		//  Estimated: `10349676 + e * (35 ±0) + k * (64 ±0)`
@@ -52,11 +52,8 @@ impl<T: frame_system::Config> pallet_im_online::WeightInfo for WeightInfo<T> {
 			.saturating_add(Weight::from_parts(0, 10349676))
 			// Standard Error: 275
 			.saturating_add(Weight::from_parts(20_308, 0).saturating_mul(k.into()))
-			// Standard Error: 2_777
-			.saturating_add(Weight::from_parts(387_445, 0).saturating_mul(e.into()))
 			.saturating_add(T::DbWeight::get().reads(4))
 			.saturating_add(T::DbWeight::get().writes(1))
-			.saturating_add(Weight::from_parts(0, 35).saturating_mul(e.into()))
 			.saturating_add(Weight::from_parts(0, 64).saturating_mul(k.into()))
 	}
 }

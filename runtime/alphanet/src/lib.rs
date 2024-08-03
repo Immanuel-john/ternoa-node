@@ -112,9 +112,6 @@ construct_runtime!(
 		Grandpa: pallet_grandpa = 10,
 		ImOnline: pallet_im_online = 11,
 		AuthorityDiscovery: pallet_authority_discovery = 12,
-		Council: pallet_collective::<Instance2> = 24,
-		PhragmenElection: pallet_elections_phragmen = 25,
-		Democracy: pallet_democracy = 26,
 
 		// Elections pallets
 		//
@@ -129,6 +126,9 @@ construct_runtime!(
 		StakingRewards: ternoa_staking_rewards = 14,
 		ElectionProviderMultiPhase: pallet_election_provider_multi_phase = 15,
 		BagsList: pallet_bags_list = 16,
+		Council: pallet_collective::<Instance2> = 24,
+		PhragmenElection: pallet_elections_phragmen = 25,
+		Democracy: pallet_democracy = 26,
 
 		// Government pallets
 		//
@@ -190,9 +190,15 @@ pub type UncheckedExtrinsic =
 pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, SignedExtra>;
+
 pub type Migrations = (
 	pallet_offences::migration::v1::MigrateToV1<Runtime>,
 );
+
+type EventRecord = frame_system::EventRecord<
+	<Runtime as frame_system::Config>::RuntimeEvent,
+	<Runtime as frame_system::Config>::Hash,
+>;
 
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
@@ -231,7 +237,6 @@ impl_runtime_apis! {
 		fn metadata_versions() -> sp_std::vec::Vec<u32> {
 			Runtime::metadata_versions()
 		}
-
 	}
 
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
@@ -366,7 +371,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash> for Runtime
+	impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash, EventRecord> for Runtime
 	{
 		fn call(
 			origin: AccountId,
@@ -375,7 +380,7 @@ impl_runtime_apis! {
 			gas_limit: Option<Weight>,
 			storage_deposit_limit: Option<Balance>,
 			input_data: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+		) -> pallet_contracts_primitives::ContractExecResult<Balance, EventRecord> {
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_call(
 				origin,
@@ -384,7 +389,8 @@ impl_runtime_apis! {
 				gas_limit,
 				storage_deposit_limit,
 				input_data,
-				true,
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
 				pallet_contracts::Determinism::Enforced,
 			)
 		}
@@ -397,7 +403,7 @@ impl_runtime_apis! {
 			code: pallet_contracts_primitives::Code<Hash>,
 			data: Vec<u8>,
 			salt: Vec<u8>,
-		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
+		) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance, EventRecord>
 		{
 			let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
 			Contracts::bare_instantiate(
@@ -408,7 +414,8 @@ impl_runtime_apis! {
 				code,
 				data,
 				salt,
-				true
+				pallet_contracts::DebugInfo::UnsafeDebug,
+				pallet_contracts::CollectEvents::UnsafeCollect,
 			)
 		}
 
@@ -437,7 +444,6 @@ impl_runtime_apis! {
 			)
 		}
 	}
-
 
 	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
 		Block,
@@ -469,15 +475,14 @@ impl_runtime_apis! {
 			SessionKeys::decode_into_raw_public_keys(&encoded)
 		}
 	}
-
-	#[cfg(feature = "try-runtime")]
+	#[cfg(feature = "try-runtime")]	
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade(checks: frame_try_runtime::UpgradeCheckSelect) -> (Weight, Weight) {
 			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
 			// have a backtrace here. If any of the pre/post migration checks fail, we shall stop
 			// right here and right now.
 			let weight = Executive::try_runtime_upgrade(checks).unwrap();
-			(weight, BlockWeights::get().max_block)
+			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
 		fn execute_block(
@@ -584,8 +589,6 @@ mod benches {
 		[pallet_utility, Utility]
 		[pallet_democracy, Democracy]
 		[pallet_elections_phragmen, PhragmenElection]
-		[pallet_identity, Identity]
-		[pallet_multisig, Multisig]
 		[pallet_assets, Assets]
 	);
 }

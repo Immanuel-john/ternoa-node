@@ -54,3 +54,6 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them.
 pub type AccountIndex = u32;
+
+/// Index of a transaction in the chain.
+pub type Nonce = u32;

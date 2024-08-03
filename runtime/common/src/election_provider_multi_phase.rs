@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Ternoa.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::{dispatch::TransactionPriority, parameter_types, sp_runtime::Perbill};
+use frame_support::{pallet_prelude::TransactionPriority, parameter_types, sp_runtime::Perbill};
+use frame_election_provider_support::bounds::ElectionBounds;
+use frame_election_provider_support::bounds::ElectionBoundsBuilder;
 use sp_std::vec;
+use sp_runtime::Percent;
 use ternoa_core_primitives::{AccountId, Balance};
 
 use crate::constants::currency::{deposit, UNITS};
@@ -56,7 +59,8 @@ parameter_types! {
 	pub const SignedDepositBase: Balance = deposit(2, 0);
 	pub const SignedDepositByte: Balance = deposit(0, 10) / 1024;
 	pub const SignedMaxRefunds: u32 = 16 / 4;
-
+	pub const SignedDepositIncreaseFactor: Percent = Percent::from_percent(10);
+	pub const SignedFixedDeposit: Balance = 1 * UNITS;
 	/// Whilst `UseNominatorsAndUpdateBagsList` or `UseNominatorsMap` is in use, this can still be a
 	/// very large value. Once the `BagsList` is in full motion, staking might open its door to many
 	/// more nominators, and this value should instead be what is a "safe" number (e.g. 22500).
@@ -74,6 +78,14 @@ parameter_types! {
 		pub MaxActiveValidators: u32 = 1000;
 
 	pub BetterUnsignedThreshold: Perbill = Perbill::from_rational(5u32, 10_000);
+	// Note: the EPM in this runtime runs the election on-chain. The election bounds must be
+	// carefully set so that an election round fits in one block.
+	pub ElectionBoundsMultiPhase: ElectionBounds = ElectionBoundsBuilder::default()
+		.voters_count(10_000.into()).targets_count(1_500.into()).build();
+	pub ElectionBoundsOnChain: ElectionBounds = ElectionBoundsBuilder::default()
+	.voters_count(5_000.into()).targets_count(1_250.into()).build();
+
+
 }
 
 frame_election_provider_support::generate_solution_type!(
