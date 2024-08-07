@@ -31,7 +31,8 @@ use sp_runtime::{
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 pub use ternoa_core_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Index};
 use sp_blockchain::{HeaderBackend, HeaderMetadata};
-
+use sc_client_api::MerkleValue;
+use sc_client_api::blockchain;
 
 pub type FullBackend = sc_service::TFullBackend<Block>;
 
@@ -370,7 +371,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		}
 	}
 
-
 	fn storage_hash(
 		&self,
 		hash: <Block as BlockT>::Hash,
@@ -381,6 +381,36 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 			client,
 			{
 				client.storage_hash(hash, key)
+			}
+		}
+	}
+
+	fn closest_merkle_value(
+		&self,
+		hash: <Block as BlockT>::Hash,
+		key: &StorageKey,
+	) -> blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+		with_client! {
+			self,
+			client,
+			{
+				client.closest_merkle_value(hash, key)
+			}
+		}
+	
+	}
+
+	fn child_closest_merkle_value(
+		&self,
+		hash: <Block as BlockT>::Hash,
+		child_info: &ChildInfo,
+		key: &StorageKey,
+	) -> blockchain::Result<Option<MerkleValue<<Block as BlockT>::Hash>>> {
+		with_client! {
+			self,
+			client,
+			{
+				client.child_closest_merkle_value(hash, child_info, key)
 			}
 		}
 	}

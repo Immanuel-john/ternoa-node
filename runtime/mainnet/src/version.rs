@@ -24,6 +24,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 /// Runtime version.
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	/// Identifies the different Substrate runtimes. There'll be at least polkadot and node.
 	/// A different on-chain spec_name to that of the native runtime would normally result
