@@ -50,6 +50,9 @@ use ternoa_runtime_common as common;
 pub use ternoa_runtime_common::constants::currency::{ UNITS, deposit };
 use frame_election_provider_support::onchain;
 use pallet_election_provider_multi_phase::SolutionAccuracyOf;
+use pallet_contracts::{
+	migration::{v10, v11, v12, v13, v14, v15}
+};
 
 use crate::{
 	constants::time::EPOCH_DURATION_IN_SLOTS, AuthorityDiscovery, Babe, BagsList, Balances,
@@ -899,7 +902,14 @@ impl pallet_contracts::Config for Runtime {
 	type MaxDebugBufferLen = ConstU32<{ 2 * 1024 * 1024 }>;
 	type RuntimeHoldReason = RuntimeHoldReason;
 	#[cfg(not(feature = "runtime-benchmarks"))]
-	type Migrations = ();
+	type Migrations = (		
+		v10::Migration<Runtime, Balances>,
+		v11::Migration<Runtime>,
+		v12::Migration<Runtime, Balances>,
+		v13::Migration<Runtime>,
+		v14::Migration<Runtime, Balances>,
+		v15::Migration<Runtime>,
+	);
 	#[cfg(feature = "runtime-benchmarks")]
 	type Migrations = pallet_contracts::migration::codegen::BenchMigrations;
 	type MaxDelegateDependencies = ConstU32<32>;
