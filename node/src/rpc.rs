@@ -85,7 +85,7 @@ pub fn create_full<C, P, SC, B>(
 		P: sc_transaction_pool_api::TransactionPool + Sync + Send + 'static,
 		SC: sp_consensus::SelectChain<Block> + 'static,
 		B: sc_client_api::Backend<Block> + Send + Sync + 'static,
-		B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
+		B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashingFor<Block>>,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use sc_consensus_babe_rpc::{Babe, BabeApiServer};

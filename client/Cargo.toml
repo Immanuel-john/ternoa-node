@@ -31,6 +31,7 @@ sp-inherents = { workspace = true }
 sp-timestamp = { workspace = true }
 frame-system = { workspace = true }
 pallet-transaction-payment = { workspace = true }
+sp-statement-store = { workspace = true }
 
 # Substrate Client
 sc-client-api = { workspace = true }

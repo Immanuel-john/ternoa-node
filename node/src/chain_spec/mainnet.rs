@@ -124,7 +124,7 @@ pub fn genesis(input: GenesisInput) -> GenesisConfig {
 
 	GenesisConfig {
 		// Core
-		system: SystemConfig { code: wasm_binary_unwrap().to_vec() },
+		system: SystemConfig { code: wasm_binary_unwrap().to_vec(), ..Default::default() },
 		balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
 		},
@@ -142,10 +142,10 @@ pub fn genesis(input: GenesisInput) -> GenesisConfig {
 				})
 				.collect::<Vec<_>>(),
 		},
-		babe: BabeConfig { authorities: vec![], epoch_config: Some(BABE_GENESIS_EPOCH_CONFIG) },
+		babe: BabeConfig { authorities: vec![], epoch_config: Some(BABE_GENESIS_EPOCH_CONFIG), ..Default::default() },
 		im_online: ImOnlineConfig { keys: vec![] },
-		authority_discovery: AuthorityDiscoveryConfig { keys: vec![] },
-		grandpa: GrandpaConfig { authorities: vec![] },
+		authority_discovery: AuthorityDiscoveryConfig { keys: vec![], ..Default::default() },
+		grandpa: GrandpaConfig { authorities: vec![], ..Default::default() },
 		staking: StakingConfig {
 			minimum_validator_count: 1,
 			validator_count: initial_authorities.len() as u32,

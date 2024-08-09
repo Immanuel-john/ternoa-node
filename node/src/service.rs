@@ -29,12 +29,16 @@ use ternoa_core_primitives::{Block, BlockNumber};
 use sc_executor::{
 	HeapAllocStrategy, NativeElseWasmExecutor, WasmExecutor, DEFAULT_HEAP_ALLOC_STRATEGY,
 };
+use sc_transaction_pool_api::OffchainTransactionPoolFactory;
+use sc_service::WarpSyncParams;
+
 pub use sc_service::ChainSpec;
 pub use sp_api::ConstructRuntimeApi;
 use sc_network::NetworkEventStream;
 
 use crate::rpc;
 
+/// The full client type definition.
 type FullClient<RuntimeApi, Executor> =
 sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 type FullBackend = sc_service::TFullBackend<Block>;
@@ -47,6 +51,13 @@ sc_consensus_grandpa::GrandpaBlockImport<
 	FullSelectChain,
 >;
 
+// /// The transaction pool type definition.
+// pub type TransactionPool = sc_transaction_pool::FullPool<Block, FullClient>;
+
+/// The minimum period of blocks on which justifications will be
+/// imported and generated.
+const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
+
 struct Basics<RuntimeApi, ExecutorDispatch>
 	where
 		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, ExecutorDispatch>>
@@ -54,7 +65,8 @@ struct Basics<RuntimeApi, ExecutorDispatch>
 		+ Sync
 		+ 'static,
 		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection,
+		// RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		ExecutorDispatch: NativeExecutionDispatch + 'static,
 {
 	task_manager: TaskManager,
@@ -73,7 +85,8 @@ fn new_partial_basics<RuntimeApi, ExecutorDispatch>(
 		+ Sync
 		+ 'static,
 		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection,
+		// RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		ExecutorDispatch: NativeExecutionDispatch + 'static,
 {
 	let telemetry = config
@@ -129,7 +142,7 @@ fn new_partial<RuntimeApi, ExecutorDispatch>(
 		FullClient<RuntimeApi, ExecutorDispatch>,
 		FullBackend,
 		FullSelectChain,
-		sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, ExecutorDispatch>>,
+		sc_consensus::DefaultImportQueue<Block>,
 		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, ExecutorDispatch>>,
 		(
 			impl Fn(
@@ -161,7 +174,8 @@ fn new_partial<RuntimeApi, ExecutorDispatch>(
 		+ Sync
 		+ 'static,
 		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection,
+		// RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		ExecutorDispatch: NativeExecutionDispatch + 'static,
 {
 
@@ -177,7 +191,8 @@ fn new_partial<RuntimeApi, ExecutorDispatch>(
 
 	let (grandpa_block_import, grandpa_link) = sc_consensus_grandpa::block_import(
 		client.clone(),
-		&client,
+		GRANDPA_JUSTIFICATION_PERIOD,
+		&(client.clone() as Arc<_>),
 		select_chain.clone(),
 		telemetry.as_ref().map(|x| x.handle()),
 	)?;
@@ -190,27 +205,51 @@ fn new_partial<RuntimeApi, ExecutorDispatch>(
 	)?;
 
 	let slot_duration = babe_link.config().slot_duration();
-	let (import_queue, babe_worker_handle) = sc_consensus_babe::import_queue(
-		babe_link.clone(),
-		block_import.clone(),
-		Some(Box::new(justification_import)),
-		client.clone(),
-		select_chain.clone(),
-		move |_, ()| async move {
-			let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+	// let (import_queue, babe_worker_handle) = sc_consensus_babe::import_queue(
+	// 	babe_link.clone(),
+	// 	block_import.clone(),
+	// 	Some(Box::new(justification_import)),
+	// 	client.clone(),
+	// 	select_chain.clone(),
+	// 	move |_, ()| async move {
+	// 		let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-			let slot =
+	// 		let slot =
+	// 			sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+	// 				*timestamp,
+	// 				slot_duration,
+	// 			);
+
+	// 		Ok((slot, timestamp))
+	// 	},
+	// 	&task_manager.spawn_essential_handle(),
+	// 	config.prometheus_registry(),
+	// 	telemetry.as_ref().map(|x| x.handle()),
+	// )?;
+
+	let (import_queue, babe_worker_handle) =
+		sc_consensus_babe::import_queue(sc_consensus_babe::ImportQueueParams {
+			link: babe_link.clone(),
+			block_import: block_import.clone(),
+			justification_import: Some(Box::new(justification_import)),
+			client: client.clone(),
+			select_chain: select_chain.clone(),
+			create_inherent_data_providers: move |_, ()| async move {
+				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+				let slot =
 				sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
 					*timestamp,
 					slot_duration,
 				);
 
-			Ok((slot, timestamp))
-		},
-		&task_manager.spawn_essential_handle(),
-		config.prometheus_registry(),
-		telemetry.as_ref().map(|x| x.handle()),
-	)?;
+				Ok((slot, timestamp))
+			},
+			spawner: &task_manager.spawn_essential_handle(),
+			registry: config.prometheus_registry(),
+			telemetry: telemetry.as_ref().map(|x| x.handle()),
+			offchain_tx_pool_factory: OffchainTransactionPoolFactory::new(transaction_pool.clone()),
+		})?;
 
 	let import_setup = (block_import, grandpa_link, babe_link);
 
@@ -340,10 +379,10 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 		+ Sync
 		+ 'static,
 		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection,
+		// RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		ExecutorDispatch: NativeExecutionDispatch + 'static,
 {
-	use sc_network_common::sync::warp::WarpSyncParams;
 
 	let hwbench = if !disable_hardware_benchmarks {
 		config.database.path().map(|database_path| {
@@ -373,11 +412,22 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 		&client.block_hash(0).ok().flatten().expect("Genesis block exists; qed"),
 		&config.chain_spec,
 	);
+	let mut net_config = sc_network::config::FullNetworkConfiguration::new(&config.network);
 
-	config
-		.network
-		.extra_sets
-		.push(sc_consensus_grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
+	net_config.add_notification_protocol(sc_consensus_grandpa::grandpa_peers_set_config(
+		grandpa_protocol_name.clone(),
+	));
+
+	// let statement_handler_proto = sc_network_statement::StatementHandlerPrototype::new(
+	// 	client
+	// 		.block_hash(0u32.into())
+	// 		.ok()
+	// 		.flatten()
+	// 		.expect("Genesis block exists; qed"),
+	// 	config.chain_spec.fork_id(),
+	// );
+	// net_config.add_notification_protocol(statement_handler_proto.set_config());
+
 
 	let warp_sync = Arc::new(sc_consensus_grandpa::warp_proof::NetworkProvider::new(
 		backend.clone(),
@@ -388,12 +438,14 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 	let (network, system_rpc_tx, tx_handler_controller, network_starter, sync_service) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &config,
+			net_config,
 			client: client.clone(),
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
 			block_announce_validator_builder: None,
 			warp_sync_params: Some(WarpSyncParams::WithProvider(warp_sync)),
+			block_relay: None,
 		})?;
 
 	let role = config.role.clone();
@@ -440,7 +492,7 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 		let proposer = sc_basic_authorship::ProposerFactory::new(
 			task_manager.spawn_handle(),
 			client.clone(),
-			transaction_pool,
+			transaction_pool.clone(),
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|x| x.handle()),
 		);
@@ -529,7 +581,7 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 	let config = sc_consensus_grandpa::Config {
 		// FIXME #1578 make this available through chainspec
 		gossip_duration: std::time::Duration::from_millis(333),
-		justification_period: 512,
+		justification_generation_period: GRANDPA_JUSTIFICATION_PERIOD,
 		name: Some(name),
 		observer_enabled: false,
 		keystore,
@@ -554,6 +606,7 @@ pub fn new_full<RuntimeApi, ExecutorDispatch>(
 			voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry,
 			shared_voter_state,
+			offchain_tx_pool_factory: OffchainTransactionPoolFactory::new(transaction_pool.clone()),
 		};
 
 		// the GRANDPA voter task is considered infallible, i.e.
@@ -579,10 +632,11 @@ impl ExecuteWithClient for RevertConsensus {
 
 	fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
 		where
-			<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+			// <Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 			Backend: sc_client_api::Backend<Block> + 'static,
 			Backend::State: sp_api::StateBackend<BlakeTwo256>,
-			Api: RuntimeApiCollection<StateBackend = Backend::State>,
+			Api: RuntimeApiCollection,
+			// Api: RuntimeApiCollection<StateBackend = Backend::State>,
 			Client: AbstractClient<Block, Backend, Api = Api> + 'static,
 	{
 		sc_consensus_babe::revert(client.clone(), self.backend, self.blocks)?;
@@ -611,7 +665,7 @@ pub fn new_chain_ops(
 	(
 		Arc<Client>,
 		Arc<FullBackend>,
-		sc_consensus::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		sc_consensus::BasicQueue<Block>,
 		TaskManager,
 	),
 	ServiceError,

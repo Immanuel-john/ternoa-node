@@ -73,20 +73,20 @@ impl SubstrateCli for Cli {
 			},
 		})
 	}
-	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		#[cfg(feature = "alphanet-native")]
-		if spec.is_alphanet() {
-			return &alphanet_runtime::VERSION
-		}
+	// fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+	// 	#[cfg(feature = "alphanet-native")]
+	// 	if spec.is_alphanet() {
+	// 		return &alphanet_runtime::VERSION
+	// 	}
 
-		#[cfg(feature = "mainnet-native")]
-		{
-			return &mainnet_runtime::VERSION
-		}
+	// 	#[cfg(feature = "mainnet-native")]
+	// 	{
+	// 		return &mainnet_runtime::VERSION
+	// 	}
 
-		#[cfg(not(feature = "mainnet-native"))]
-		panic!("No runtime feature (alphanet, mainnet) is enabled");
-	}
+	// 	#[cfg(not(feature = "mainnet-native"))]
+	// 	panic!("No runtime feature (alphanet, mainnet) is enabled");
+	// }
 }
 
 /// Parse and run command line arguments
@@ -250,7 +250,8 @@ fn benchmark(cli: &Cli, cmd: &BenchmarkCmd) -> Result<()> {
 		BenchmarkCmd::Pallet(cmd) => {
 			ensure_dev(chain_spec)?;
 			with_runtime!(chain_spec, {
-				runner.sync_run(|config| cmd.run::<Block, ExecutorDispatch>(config))
+				runner.sync_run(|config| cmd.run::<Block, sp_statement_store::runtime_api::HostFunctions>(config))
+				// runner.sync_run(|config| cmd.run::<Block, ExecutorDispatch>(config))
 			});
 		},
 		#[cfg(not(feature = "runtime-benchmarks"))]

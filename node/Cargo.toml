@@ -79,6 +79,7 @@ sp-trie = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "re
 # These dependencies are used for runtime benchmarking
 frame-benchmarking = { version = "4.0.0-dev", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.2.0" }
 frame-benchmarking-cli = { version = "4.0.0-dev", git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.2.0" }
+sp-statement-store = { git = "https://github.com/paritytech/polkadot-sdk.git", branch = "release-polkadot-v1.2.0" }
 
 # Local Dependencies
 alphanet-runtime = { path = "../runtime/alphanet", optional = true }

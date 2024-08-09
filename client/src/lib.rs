@@ -47,8 +47,13 @@ pub struct AlphanetExecutorDispatch;
 
 #[cfg(feature = "alphanet")]
 impl sc_executor::NativeExecutionDispatch for AlphanetExecutorDispatch {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
+		/// Only enable the benchmarking host functions when we actually want to benchmark.
+		#[cfg(feature = "runtime-benchmarks")]
+		type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+		/// Otherwise we only use the default Substrate host functions.
+		#[cfg(not(feature = "runtime-benchmarks"))]
+		type ExtendHostFunctions = ();
+	
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
 		alphanet_runtime::api::dispatch(method, data)
 	}
@@ -63,7 +68,7 @@ pub struct MainnetExecutorDispatch;
 
 #[cfg(feature = "mainnet")]
 impl sc_executor::NativeExecutionDispatch for MainnetExecutorDispatch {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+	type ExtendHostFunctions = sp_statement_store::runtime_api::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
 		mainnet_runtime::api::dispatch(method, data)
@@ -90,8 +95,8 @@ pub trait RuntimeApiCollection:
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
 	+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
-where
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+// where
+// 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
@@ -108,7 +113,7 @@ where
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
 		+ sp_authority_discovery::AuthorityDiscoveryApi<Block>,
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+	// <Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
 
@@ -130,7 +135,9 @@ BlockchainEvents<Block>
 		Block: BlockT,
 		Backend: BackendT<Block>,
 		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+		Self::Api: RuntimeApiCollection,
+		// Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+
 {
 }
 
@@ -149,7 +156,9 @@ impl<Block, Backend, Client> AbstractClient<Block, Backend> for Client
 		+ Sync
 		+ CallApiAt<Block, StateBackend = Backend::State>
 		+ HeaderMetadata<Block, Error = sp_blockchain::Error>,
-		Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+		Client::Api: RuntimeApiCollection,
+		// Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+
 {
 }
 
@@ -171,10 +180,11 @@ pub trait ExecuteWithClient {
 	/// Execute whatever should be executed with the given client instance.
 	fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
 	where
-		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		// <Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 		Backend: sc_client_api::Backend<Block> + 'static,
 		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Api: crate::RuntimeApiCollection<StateBackend = Backend::State>,
+		// Api: crate::RuntimeApiCollection<StateBackend = Backend::State>,
+		Api: crate::RuntimeApiCollection,
 		Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
